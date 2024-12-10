@@ -111,7 +111,11 @@ Die Pins von Port F sind häufig für die Verwendung in Embedded-Systemen und Mi
 | PD6       | GPIO           | |
 | PD7       | GPIO           | |
 
-# Abgabe 2
+## Fragen Open-Lab
+
+1. Warum Zeile 75 Takt auf 15999? Habe ich oft bei anderen gesehen
+
+## Abgabe 2
 
 Beispiel: 16 MHz Taktfrequenz
 
@@ -122,3 +126,38 @@ Zeit in Sekunden: 1 ms = 0,001 Sekunden
 Taktfrequenz: 16 MHz = 16.000.000 Taktfrequenz
 
 Berechnung der Taktzyklen: $$\text{Anzahl der Taktzyklen} = 16,000,000, \text{Hz} \times 0,001, \text{s} = 16,000$$
+
+### Aufgabe a
+
+- Rückkehr an den Aufrufer:
+  - `sys_tick_handler` hat am Ende `bx lr` (Branch Exchange to Link Register) dadurch springt es zurück an den Aufrufer
+  - Zeile: 131
+- Schutz der Registerinhalte
+  - Am Anfang von `sys_tick_handler` wird mit `push {r0, r1, lr}` der Wert von `r0`, `r1` und `lr` auf den Stack geschrieben
+    - Zeile 103
+  - Am Ende von `sys_tick_handler` wird mit `pop {r0, r1, lr}` der Wert von `r0`, `r1` und `lr` vom Stack geladen
+    - Zeile 130
+  - im `sys_tick_handler` wird dann nur `r0` und `r1` verwendet und Veränderungen werden durch s und ms festgehalten
+- Warum keine Interupts?
+  - Bei Interupts wird nicht direkt ersichtlich wie oft diese aufgerufen werden
+  - keine feste Sequenz
+  - Können zu Interupt-Konflikten führen
+
+### Aufgabe b
+
+DATA -> 4 Bit
+DIR -> 16 Bit
+
+Memory und Peripherals zeigen beide das gleiche an
+
+#### Stack
+
+Bei push {r1, r2} wird der Wert von r2 zuerst (an die höhere Adresse) und dann der Wert von r1 (an die niedrigere Adresse) auf den Stack geschrieben.
+
+Bei push {r2, r1} wird der Wert von r1 zuerst (an die höhere Adresse) und dann der Wert von r2 (an die niedrigere Adresse) geschrieben. Der Speicherinhalt wird also anders angeordnet.
+
+Dies liegt daran, dass der Stack im ARM-Architektur-Modell abwärts wächst.
+
+### Aufgabe c
+
+`sdiv` : division mit vorzeichen
