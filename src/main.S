@@ -58,16 +58,89 @@ ms:
 .global sys_tick_handler
 .align
 
+// Hardware initialisieren
 init_hardware:
-// here you can init your hardware
+    // GPIO-Clock aktivieren
+    LDR R0, =RCGC_GPIO_R
+    LDR R1, =RCGC_GPIO_PORT_F
+    STR R1, [R0]
+    NOP
+    NOP
 
-.thumb_func
+    // Setze GPIO-Pin PF1 (Rot) als Ausgang
+    LDR R0, =GPIO_PORT_F_DIR_R
+    LDR R1, [R0]
+    ORR R1, R1, (LED_R | LED_G | LED_B)
+    STR R1, [R0]
+
+    // Digitale Funktion für PF1 aktivieren
+    LDR R0, =GPIO_PORT_F_DEN_R
+    LDR R1, [R0]
+    ORR R1, R1, (LED_R |LED_G | LED_B)
+    STR R1, [R0]
+
+    BX LR
+
+// Subroutine: SysTick-Handler
 sys_tick_handler:
-// call this method every millisecond, dictated by the SysTick
+    PUSH {R4, LR}         // Sicherung von Registern
 
-main: // here the actual program starts; you might want to call init_hardware
-    mov r1, BIT5 | BIT10 // this is a example of how you can use bitwise or operations on the right side; this also works in equ directives
+    // ms++
+    LDR R0, =ms
+    LDR R1, [R0]
+    ADD R1, R1, #1
+    STR R1, [R0]
+
+//    CMP R1, #1000         // Eigentlich 1000ms = 1s
+    CMP R1, #300
+    BNE update_led
+
+    // ms auf 0 setzen und s++
+    MOV R1, #0
+    STR R1, [R0]
+    LDR R0, =s
+    LDR R1, [R0]
+    ADD R1, R1, #1
+    STR R1, [R0]
+
+update_led:
+    // Toggle LED basierend auf den aktuellen Sekundenwert (s)
+    LDR R0, =s
+    LDR R1, [R0]
+    ANDS R1, R1, #1         // Prüfen, ob die aktuelle Sekunde ungerade oder gerade ist
+    LDR R0, =GPIO_PORT_F_DATA_R
+    BEQ turn_off_led
+
+    // LED einschalten
+    LDR R1, [R0]
+    ORR R1, R1, (LED_R | LED_G | LED_B)	
+    STR R1, [R0]
+    B end_handler
+
+turn_off_led:
+    // LED ausschalten
+    LDR R1, [R0]
+    BIC R1, R1, (LED_R | LED_G | LED_B)
+    STR R1, [R0]
+
+end_handler:
+    POP {R4, LR}          // Wiederherstellen der Register
+    BX LR                 // Rückkehr zum Aufrufer
+
+// Hauptprogramm
+main:
+    BL init_hardware       // Hardware initialisieren
 
 main_loop:
-// create an infinite loop here
+    BL sys_tick_handler
+    BL delay_1ms
+    B main_loop
+
+delay_1ms:
+    MOV R0, #16000         // Anzahl der Zyklen für 1 ms (16 MHz)
+delay_loop:
+    SUBS R0, R0, #1
+    BNE delay_loop         // Warten, bis R0 == 0
+    BX LR
+
 .end
